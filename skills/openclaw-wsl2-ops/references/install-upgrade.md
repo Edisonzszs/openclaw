@@ -72,6 +72,12 @@ For one-command validation, run:
 powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\check-openclaw-wsl2.ps1
 ```
 
+For one-command upgrade to npm latest, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\upgrade-openclaw-wsl2.ps1
+```
+
 ## Why Reinstall The Service Every Time
 
 Older installs can leave the systemd service pointing at an outdated entrypoint such as:

@@ -58,6 +58,9 @@ Read [references/install-upgrade.md](references/install-upgrade.md) when perform
 For repeatable post-upgrade validation, run:
 - `powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\check-openclaw-wsl2.ps1`
 
+For one-command upgrade to the current latest release, run:
+- `powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\upgrade-openclaw-wsl2.ps1`
+
 ### Restart After Reboot
 
 Use:
@@ -120,3 +123,4 @@ If the user says `cannot open`:
 - Troubleshooting and known pitfalls: [references/troubleshooting.md](references/troubleshooting.md)
 - Validation script: [scripts/check-openclaw-wsl2.ps1](scripts/check-openclaw-wsl2.ps1)
 - Repair script: [scripts/repair-openclaw-wsl2.ps1](scripts/repair-openclaw-wsl2.ps1)
+- Upgrade script: [scripts/upgrade-openclaw-wsl2.ps1](scripts/upgrade-openclaw-wsl2.ps1)

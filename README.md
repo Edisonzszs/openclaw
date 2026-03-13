@@ -15,6 +15,7 @@ It covers:
 - gateway repair and recovery
 - dashboard access troubleshooting
 - one-command validation and repair scripts
+- one-command upgrade to npm latest
 
 ## Main Files
 
@@ -23,6 +24,7 @@ It covers:
 - `skills/openclaw-wsl2-ops/references/troubleshooting.md`
 - `skills/openclaw-wsl2-ops/scripts/check-openclaw-wsl2.ps1`
 - `skills/openclaw-wsl2-ops/scripts/repair-openclaw-wsl2.ps1`
+- `skills/openclaw-wsl2-ops/scripts/upgrade-openclaw-wsl2.ps1`
 
 ## Common Commands
 
@@ -36,4 +38,10 @@ Repair the gateway environment:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\repair-openclaw-wsl2.ps1
+```
+
+Upgrade OpenClaw to the current latest release and revalidate:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\upgrade-openclaw-wsl2.ps1
 ```
