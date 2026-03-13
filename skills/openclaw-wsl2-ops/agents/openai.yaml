@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenClaw WSL2 Ops"
+  short_description: "Operate OpenClaw on Windows WSL2 safely."
+  default_prompt: "Use $openclaw-wsl2-ops to install, upgrade, restart, or repair OpenClaw on this Windows plus WSL2 machine."
