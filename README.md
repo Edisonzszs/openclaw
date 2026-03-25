@@ -1,48 +1,47 @@
-# OpenClaw WSL2 Skills
+﻿# OpenClaw WSL2 Skills
 
 This repository stores reusable Codex skills for installing, upgrading, restarting, validating, and repairing OpenClaw on Windows with WSL2.
 
-The current focus is a production-style operations skill for a Windows host that runs OpenClaw inside `Ubuntu-24.04` on WSL2.
+The current focus is a practical operations skill for a Windows host that runs OpenClaw inside `Ubuntu-24.04` on WSL2.
 
-## Background
+## What This Repository Solves
 
-Running OpenClaw on Windows through WSL2 works well, but the operating workflow is different from a plain Linux server or a local macOS install.
+OpenClaw works well in WSL2, but the operational flow is different from a plain Linux server or a native desktop install.
 
-In practice, this environment has a few repeatable characteristics:
+In this environment, the recurring realities are:
 - the OpenClaw CLI runs inside WSL, not directly in native Windows
-- the gateway is usually bound to `127.0.0.1:18789`
+- the gateway is usually exposed on `127.0.0.1:18789`
 - the dashboard must be opened with a tokenized URL
 - upgrades can leave the systemd service pointing at an old entrypoint
-- noisy WSL warnings often appear even when the gateway is healthy
+- WSL often emits noisy warnings even when the gateway itself is healthy
 
-This repository captures those operational details as a Codex skill so the workflow is reusable instead of being re-derived every time.
+This repository turns those operational lessons into a reusable Codex skill instead of leaving them as ad hoc troubleshooting notes.
 
 ## Repository Goal
 
-The goal of this repository is to make OpenClaw lifecycle management on Windows + WSL2 predictable.
+The goal is to make the OpenClaw lifecycle on Windows + WSL2 predictable.
 
 That includes:
 - first-time install
 - upgrade to the latest release
-- restart after Windows reboot
-- health validation
+- restart after Windows reboot or sleep
+- post-upgrade validation
 - gateway repair after failed upgrades
 - dashboard access troubleshooting
-- codifying the real fixes that were needed in this environment
+- recording the real fixes that proved reliable in this environment
 
-## Included Skill
+## Environment Assumptions
 
-### `openclaw-wsl2-ops`
+Unless intentionally adapted, this repository assumes:
+- Windows host
+- WSL2 enabled
+- distro name: `Ubuntu-24.04`
+- Linux user: `shengz`
+- gateway bind: `127.0.0.1`
+- gateway port: `18789`
+- OpenClaw installed inside WSL
 
-This skill is built for Codex instances that need to operate OpenClaw in a WSL2-based environment.
-
-It provides:
-- a workflow for inspecting the current state before acting
-- a standard upgrade path using the official installer
-- a standard repair path using `doctor --fix` and service reinstall
-- a standard validation path from both WSL and Windows sides
-- references for troubleshooting common failures
-- PowerShell automation scripts for check, repair, and upgrade tasks
+If your setup differs, adjust the script parameters before using them as-is.
 
 ## Repository Structure
 
@@ -61,18 +60,32 @@ skills/
       upgrade-openclaw-wsl2.ps1
 ```
 
-## Environment Assumptions
+## The Stable Operating Flow
 
-Unless intentionally adapted, this repository assumes the following environment:
-- Windows host
-- WSL2 enabled
-- distro name: `Ubuntu-24.04`
-- Linux user: `shengz`
-- gateway bind: `loopback`
-- gateway port: `18789`
-- OpenClaw installed inside WSL
+This repository standardizes the workflow that proved reliable in practice:
+1. Inspect the current state before changing anything.
+2. Use the official installer for install or upgrade.
+3. After every install or upgrade, run `openclaw gateway install --force`.
+4. Restart the gateway.
+5. Validate from both WSL and Windows.
+6. Open the dashboard only through the tokenized URL from `openclaw dashboard --no-open`.
 
-If your local setup differs, adjust the script parameters before using them as-is.
+That sequence avoids most of the failures we repeatedly hit.
+
+## Included Skill
+
+### `openclaw-wsl2-ops`
+
+This skill is built for Codex instances that need to operate OpenClaw in a WSL2-based environment.
+
+It provides:
+- a standard install workflow
+- a standard upgrade workflow
+- a standard restart-after-reboot workflow
+- a standard repair workflow
+- validation from both WSL and Windows sides
+- troubleshooting references for common failures
+- PowerShell scripts for check, repair, and upgrade tasks
 
 ## What The Skill Contains
 
@@ -80,27 +93,28 @@ If your local setup differs, adjust the script parameters before using them as-i
 
 The top-level skill instructions tell Codex:
 - when to use the skill
-- how to classify a request
+- how to classify the request
 - what the default WSL environment looks like
 - what the standard install, upgrade, restart, repair, and dashboard flows are
 
 ### `references/install-upgrade.md`
 
-This reference focuses on:
+This reference now consolidates the core runbook:
 - fresh install sequence
 - upgrade sequence
-- post-upgrade validation sequence
-- why `openclaw gateway install --force` is always part of the workflow
+- restart-after-reboot sequence
+- validation sequence
+- why `openclaw gateway install --force` is mandatory in this environment
 
 ### `references/troubleshooting.md`
 
-This reference focuses on real failures that happened in this environment, including:
+This reference focuses on real failures seen in this environment, including:
 - dashboard opens without token and appears broken
 - `openclaw update --tag ...` returning `SKIPPED`
 - `--install-method git` hanging or partially breaking the CLI
-- upgrade succeeded but gateway service still points to an old path
+- upgrade succeeded but the gateway service still points to an old path
 - installer running `doctor` under `root`
-- WSL warning noise that looks scary but is often not fatal
+- WSL warning noise that looks serious but often is not fatal
 
 ### `scripts/check-openclaw-wsl2.ps1`
 
@@ -112,7 +126,7 @@ It checks:
 - Windows-side HTTP reachability on `127.0.0.1:18789`
 - `openclaw dashboard --no-open`
 
-It returns structured JSON so the result is easy to inspect or automate around.
+Use it when you want a fast answer to whether the environment is actually healthy.
 
 ### `scripts/repair-openclaw-wsl2.ps1`
 
@@ -125,7 +139,7 @@ It runs:
 - `openclaw gateway status`
 - the final validation script
 
-Use this when the gateway is broken or after a failed or inconsistent upgrade.
+Use it when the gateway is broken or after an upgrade that completed inconsistently.
 
 ### `scripts/upgrade-openclaw-wsl2.ps1`
 
@@ -134,7 +148,7 @@ This script performs the standard upgrade workflow.
 It runs:
 - current version detection
 - npm `latest` detection
-- official installer when an upgrade is needed
+- the official installer when an upgrade is needed
 - gateway service reinstall
 - gateway restart
 - final validation
@@ -143,28 +157,75 @@ If the installed version already matches npm `latest`, it skips the installer st
 
 ## Quick Start
 
-### Validate the current environment
+### 1. Check Current Health
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\check-openclaw-wsl2.ps1
 ```
 
-### Repair a broken environment
+### 2. Repair A Broken Environment
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\repair-openclaw-wsl2.ps1
 ```
 
-### Upgrade to the current latest release
+### 3. Upgrade To The Current Latest Release
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\upgrade-openclaw-wsl2.ps1
 ```
 
+## Typical Operating Scenarios
+
+### Fresh Install
+
+The reliable install sequence is:
+1. Validate WSL with `wsl --status` and `wsl -l -v`.
+2. Enable `systemd` in `/etc/wsl.conf`.
+3. Run the official installer.
+4. Verify `openclaw --version` as the real Linux user.
+5. Configure `~/.openclaw/.env`.
+6. Run non-interactive onboarding.
+7. Run `openclaw gateway install --force`.
+8. Restart the gateway and confirm status.
+9. Validate Windows-side access on `127.0.0.1:18789`.
+10. Generate the dashboard link with `openclaw dashboard --no-open`.
+
+### Upgrade
+
+The reliable upgrade sequence is:
+1. Confirm npm `latest` first.
+2. Run the official installer.
+3. Run `openclaw gateway install --force`.
+4. Restart the gateway.
+5. Verify the new version.
+6. Confirm Windows-side HTTP returns `200`.
+7. Regenerate the tokenized dashboard URL.
+
+This repository treats service reinstall as part of the upgrade, not an optional cleanup step.
+
+### Restart After Windows Reboot Or Sleep
+
+Most common flow:
+1. Restart the gateway.
+2. Check gateway status.
+3. Generate the dashboard URL again.
+4. If the page still does not open, check Windows-side `HTTP 200` before assuming the service is down.
+
+### Dashboard Will Not Open
+
+Start by validating the environment:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\check-openclaw-wsl2.ps1
+```
+
+If gateway health is good and Windows-side HTTP returns `200`, the gateway is usually fine. In this environment the common cause is opening the bare dashboard URL instead of the tokenized URL returned by `openclaw dashboard --no-open`.
+
 ## Which Script To Use
 
 Use `check-openclaw-wsl2.ps1` when:
-- you want a fast health check
+- you want a quick health check
 - you just rebooted Windows
 - you just upgraded OpenClaw
 - you want to confirm the dashboard link can be generated
@@ -177,85 +238,22 @@ Use `repair-openclaw-wsl2.ps1` when:
 
 Use `upgrade-openclaw-wsl2.ps1` when:
 - you want to move to the current latest OpenClaw version
-- you want a safe standard upgrade path instead of ad hoc package-manager commands
+- you want the standard upgrade path instead of ad hoc package-manager commands
 - you want upgrade plus validation as a single operation
-
-## Typical Operating Flows
-
-### 1. After Windows Reboot
-
-Most common workflow:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\check-openclaw-wsl2.ps1
-```
-
-If the gateway is not healthy:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\repair-openclaw-wsl2.ps1
-```
-
-### 2. Before Or After Upgrade
-
-Run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\upgrade-openclaw-wsl2.ps1
-```
-
-This covers:
-- version comparison
-- official installer execution when needed
-- service reinstall
-- gateway restart
-- final verification
-
-### 3. Dashboard Will Not Open
-
-First validate the environment:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\skills\openclaw-wsl2-ops\scripts\check-openclaw-wsl2.ps1
-```
-
-If gateway health is good and Windows-side HTTP returns `200`, the most likely problem is not the gateway itself. In this environment the usual cause is opening the bare dashboard URL instead of the tokenized URL returned by `openclaw dashboard --no-open`.
-
-### 4. Upgrade Succeeded But Gateway Failed
-
-This repository treats this as a first-class failure mode.
-
-The expected recovery is:
-- reinstall the gateway service
-- restart it
-- validate again
-
-In practice, this is usually caused by the service file still pointing at an old OpenClaw installation path.
-
-## Known Pitfalls Covered By This Repository
-
-This repository already captures these recurring problems:
-- `openclaw update --tag ...` returning `SKIPPED` on non-git installs
-- `--install-method git` hanging or leaving the CLI half-installed
-- the official installer succeeding but the gateway still referencing an old path
-- dashboard access without `#token=...`
-- installer output under `root` not matching the real user environment
-- WSL NAT and path-translation warnings that are usually non-fatal
-- PowerShell and Bash syntax differences during troubleshooting
 
 ## Why The Workflow Prefers The Official Installer
 
 The official installer proved to be the most reliable path in this environment because it:
 - handles package installation consistently
 - works for repeated upgrades
-- is aligned with current OpenClaw docs
+- is aligned with the current OpenClaw docs
 - avoids some of the ambiguity of direct `openclaw update` on non-git installs
 
-The repository still documents failure modes around the installer, but it remains the standard path.
+The repository still documents failure modes around the installer, but it remains the default path.
 
 ## Why Service Reinstall Is Mandatory After Upgrade
 
-A key lesson in this environment is that a successful CLI upgrade does not guarantee a healthy gateway service.
+A successful CLI upgrade does not guarantee a healthy gateway service.
 
 A stale systemd service may still point to an old entrypoint such as:
 - `~/.npm-global/lib/node_modules/openclaw/dist/index.js`
@@ -269,13 +267,24 @@ That is why the standard workflow always includes:
 openclaw gateway install --force
 ```
 
+## Known Pitfalls Covered By This Repository
+
+This repository already captures these recurring problems:
+- `openclaw update --tag ...` returning `SKIPPED` on non-git installs
+- `--install-method git` hanging or leaving the CLI half-installed
+- the official installer succeeding but the gateway still referencing an old path
+- dashboard access without `#token=...`
+- installer output under `root` not matching the real user environment
+- WSL NAT and path-translation warnings that are usually non-fatal
+- PowerShell and Bash syntax differences during troubleshooting
+
 ## Notes About WSL Output Noise
 
 The environment often emits warnings such as:
 - `localhost proxy ... NAT mode`
 - `Failed to translate 'E:\Program Files\MATLAB\...'`
 
-These warnings are important to recognize, but in most of the tested cases they were not the root cause of OpenClaw failures. The scripts in this repository intentionally tolerate those messages and continue judging success by exit code and actual health checks.
+These warnings matter to recognize, but in most tested cases they were not the root cause of OpenClaw failures. The scripts in this repository intentionally tolerate those messages and continue judging success by exit code and actual health checks.
 
 ## Using This Skill With Codex
 
@@ -292,4 +301,4 @@ Typical prompts include:
 
 ## Related Files
 
-The operational knowledge in this repository was derived from a working local runbook and iteratively refined through real install and upgrade incidents. If you maintain a separate local operations repo, keep the two in sync so the skill and the manual runbook do not drift apart.
+The operational knowledge in this repository was derived from a working local runbook and then refined through real install and upgrade incidents. Keep the skill, the local runbook, and the GitHub README aligned so the documented workflow does not drift.
